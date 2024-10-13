@@ -73,12 +73,11 @@ public class MenuPrincipal {
                 break;
             case 5:
                 //Listar todos los jugadores registrados
+                ListarJugadores.listarJugadores(elegirZona(sc), ListarJugadores.obtenerTipoArchivo(sc));
                 break;
             case 6:
                 System.out.println("Mostrando submenu...");
                 break;
-            // Revisar para mostrar otro menu
-//*******************************************************************************************************
             case 7:
                 System.out.println("Hasta la proxima, jefe");
                 System.exit(0);
