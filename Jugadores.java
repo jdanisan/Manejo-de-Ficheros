@@ -4,7 +4,24 @@ Guardar los datos en el tipo de fichero seleccionado en la configuración.
  */
 package JD_PE;
 
-import java.io.Serializable;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -19,6 +36,7 @@ public class Jugadores implements Serializable {
     private int life_level;
     private int coins;
     private int hard_coins;
+    private DataInputStream dataInput;
 
     /*public Jugadores(int user_id, String nick_name, int experience,
             int life_level, int coins, int hard_coins) {
@@ -41,7 +59,7 @@ public class Jugadores implements Serializable {
     }
 
     
-    public Jugadores() {
+    public Jugadores(String nick_name, int experience, int lifeLevel, int coins) {
     }
     
 
@@ -73,6 +91,7 @@ public class Jugadores implements Serializable {
         return new Jugadores(nick_name, experience, life_level, coins, hard_coins);
         
     }
+
 
     /**
      * @return the user_id
@@ -157,4 +176,467 @@ public class Jugadores implements Serializable {
     public void setHard_coins(int hard_coins) {
         this.hard_coins = hard_coins;
     }
+
+    public static Jugadores buscarJugadorPorID(String ruta, int id) {
+        // Identificar el tipo de archivo por la extensión
+        if (ruta.endsWith(".txt")) {
+            return buscarJugadorTxt(ruta, id);
+        } else if (ruta.endsWith(".dat")) {
+            return buscarJugadorDat(ruta, id);
+        } else if (ruta.endsWith(".bin")) {
+            return buscarJugadorBinario(ruta, id);
+        } else if (ruta.endsWith(".obj")) {
+            return buscarJugadorObjetoBinario(ruta, id);
+        } else {
+            System.out.println("Tipo de archivo no reconocido.");
+            return null;
+        }
+    }
+
+    // Buscar jugador en un archivo de texto plano
+    private static Jugadores buscarJugadorTxt(String ruta, int id) {
+        File archivo = new File(ruta);
+
+        try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
+            String linea;
+
+            while ((linea = br.readLine()) != null) {
+                String[] datosJugador = linea.split(",");  // Asumiendo que los datos están separados por comas
+
+                // Verificar si la línea tiene el formato correcto
+                if (datosJugador.length < 6) {
+                    System.out.println("Línea malformada: " + linea);
+                    continue; // Saltar a la siguiente línea
+                }
+
+                // Extraer el ID
+                try {
+                    int idJugador = Integer.parseInt(datosJugador[0].split("=")[1].trim());
+
+                    if (idJugador == id) {
+                        // Crear y devolver el objeto Jugador
+                        return crearJugadorDesdeDatos(datosJugador);
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Error al procesar el ID en la línea: " + linea);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;  // Retornar null si no se encuentra el jugador
+    }
+
+
+    // Buscar jugador en un archivo .dat (binario secuencial)
+    private static Jugadores buscarJugadorDat(String ruta, int id) {
+        try (DataInputStream dis = new DataInputStream(new FileInputStream(ruta))) {
+            while (dis.available() > 0) {
+                int idJugador = dis.readInt();
+                String nick_name = dis.readUTF();
+                int experience = dis.readInt();
+                int life_level = dis.readInt();
+                int coins = dis.readInt();
+                int hard_coins = dis.readInt();
+
+                if (idJugador == id) {
+                    return new Jugadores(nick_name, experience, life_level,  coins,  hard_coins);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    // Buscar jugador en un archivo binario de acceso aleatorio
+    private static Jugadores buscarJugadorBinario(String ruta, int id) {
+        try (RandomAccessFile raf = new RandomAccessFile(ruta, "r")) {
+            while (raf.getFilePointer() < raf.length()) {
+                int idJugador = raf.readInt();
+                String nick_name = raf.readUTF();
+                int experience = raf.readInt();
+                int life_level = raf.readInt();
+                int coins = raf.readInt();
+                int hard_coins = raf.readInt();
+
+                if (idJugador == id) {
+                    return new Jugadores(nick_name, experience, life_level,  coins,  hard_coins);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    // Buscar jugador en un archivo de objetos binarios
+    private static Jugadores buscarJugadorObjetoBinario(String ruta, int id) {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(ruta))) {
+            while (true) {
+                Jugadores jugador = (Jugadores) ois.readObject(); // Lanzará EOFException cuando se acaben los objetos
+                if (jugador.getUser_id() == id) {
+                    return jugador;
+                }
+            }
+        } catch (EOFException e) {
+            // Fin de archivo alcanzado
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private static Jugadores crearJugadorDesdeDatos(String[] datosJugador) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
+
+    public static void eliminarJugadorPorID(String ruta, int id) {
+        File archivo = new File(ruta);
+        File archivoTemp = new File(ruta + ".tmp");  // Archivo temporal
+
+        // Verificar si el archivo original existe
+        if (!archivo.exists()) {
+            System.out.println("El archivo no existe: " + ruta);
+            return;
+        }
+
+        boolean jugadorEliminado = false;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(archivo));
+             BufferedWriter bw = new BufferedWriter(new FileWriter(archivoTemp))) {
+
+            String linea;
+
+            // Leer cada línea del archivo original
+            while ((linea = br.readLine()) != null) {
+                // Extraemos solo el ID usando una expresión regular
+                try {
+                    String idStr = linea.replaceAll("^.*User_id=\\s*(\\d+).*$", "$1").trim();  // Extraer el ID
+                    int idJugador = Integer.parseInt(idStr);  // Convertir a entero
+
+                    // Si el ID no coincide con el jugador a eliminar, copiamos la línea al archivo temporal
+                    if (idJugador != id) {
+                        bw.write(linea);
+                        bw.newLine();
+                    } else {
+                        jugadorEliminado = true;
+                        System.out.println("Jugador con ID " + idJugador + " ha sido eliminado.");
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Error al procesar el ID en la línea: " + linea);
+                }
+            }
+
+        } catch (IOException e) {
+            System.out.println("Error al procesar el archivo: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // Reemplazar el archivo original por el temporal si el jugador fue eliminado
+        if (jugadorEliminado) {
+            if (archivo.delete()) {
+                boolean renombrado = archivoTemp.renameTo(archivo);
+                if (!renombrado) {
+                    System.out.println("Error al renombrar el archivo temporal.");
+                }
+            } else {
+                System.out.println("No se pudo eliminar el archivo original.");
+            }
+        } else {
+            // Si no se eliminó ningún jugador, borrar el archivo temporal
+            archivoTemp.delete();
+        }
+    }
+
+    /*Fichero de acceso aleatorio binario *****************************************************************************************/
+    public static void JugadorBinario(String ruta, Scanner sc) throws FileNotFoundException {
+        File archivo = new File(ruta + "\\Jugadores2.dat");
+        int id=0;
+        try (RandomAccessFile raf = new RandomAccessFile(archivo, "rw")) {
+            raf.seek(raf.length());
+
+            Jugadores jugador = crearJugadores(sc);
+            jugador.setUser_id(id++);
+
+            raf.writeInt(jugador.getUser_id());
+            raf.writeUTF(String.format("%-20s", jugador.getNick_name()));
+            raf.writeInt(jugador.getExperience());
+            raf.writeInt(jugador.getLife_level());
+            raf.writeInt(jugador.getCoins());
+            raf.writeInt(jugador.getHard_coins());
+
+            System.out.println("Jugador guardado en el archivo binario.");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void LeerJugador(String ruta, int id) throws FileNotFoundException {
+        File archivo = new File(ruta + "\\Jugadores2.dat");
+        try (RandomAccessFile raf = new RandomAccessFile(archivo, "r")) {
+            boolean encontrado = false;
+
+            while (raf.getFilePointer() < raf.length()) {
+                int userId = raf.readInt();
+                String nickName = raf.readUTF();
+                int experience = raf.readInt();
+                int lifeLevel = raf.readInt();
+                int coins = raf.readInt();
+                int hardCoins = raf.readInt();
+
+                if (userId == id) {
+                    System.out.println("ID: " + userId);
+                    System.out.println("Nombre: " + nickName.trim());
+                    System.out.println("Experiencia: " + experience);
+                    System.out.println("Nivel de vida: " + lifeLevel);
+                    System.out.println("Monedas: " + coins);
+                    System.out.println("Monedas difíciles: " + hardCoins);
+                    encontrado = true;
+                    break;
+                }
+            }
+
+            if (!encontrado) {
+                System.out.println("Jugador con ID " + id + " no encontrado.");
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static int elegirID(Scanner sc){
+        int id;
+        System.out.println("Dime el ID a buscar");
+        id=sc.nextInt();
+        return id;
+    }
+    /*Ficheros XML ****************************************************************************************************************/
+    public static void JugadorXML(String ruta, Scanner sc) throws FileNotFoundException {
+
+        Path rutaT = Paths.get(ruta + "\\Jugadores2.xml");
+        try {
+            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+            Document doc;
+            Element rootElement;
+
+            if (Files.exists(rutaT)) {
+                doc = docBuilder.parse(rutaT.toFile());
+                doc.getDocumentElement().normalize();
+                rootElement = doc.getDocumentElement();
+            } else {
+                doc = docBuilder.newDocument();
+                rootElement = doc.createElement("jugadores");
+                doc.appendChild(rootElement);
+            }
+
+            // Elemento jugador
+            Element jugador = doc.createElement("jugador");
+            rootElement.appendChild(jugador);
+
+            System.out.println("Introduce el ID del jugador: ");
+            int userId = sc.nextInt();
+            sc.nextLine();  // limpiar el buffer
+
+            System.out.println("Introduce el nombre del jugador: ");
+            String nickName = sc.nextLine();
+
+            System.out.println("Introduce el nivel de vida: ");
+            int lifeLevel = sc.nextInt();
+
+            System.out.println("Introduce el número de monedas: ");
+            int coins = sc.nextInt();
+
+            System.out.println("Introduce el número de monedas de pago: ");
+            int hardCoins = sc.nextInt();
+
+            // Atributos del jugador
+            Element id = doc.createElement("id");
+            id.appendChild(doc.createTextNode(Integer.toString(userId)));
+            jugador.appendChild(id);
+
+            Element nombre = doc.createElement("nickname");
+            nombre.appendChild(doc.createTextNode(nickName));
+            jugador.appendChild(nombre);
+
+            Element nivelVida = doc.createElement("lifelevel");
+            nivelVida.appendChild(doc.createTextNode(Integer.toString(lifeLevel)));
+            jugador.appendChild(nivelVida);
+
+            Element monedas = doc.createElement("coins");
+            monedas.appendChild(doc.createTextNode(Integer.toString(coins)));
+            jugador.appendChild(monedas);
+
+            Element monedasDificiles = doc.createElement("hardcoins");
+            monedasDificiles.appendChild(doc.createTextNode(Integer.toString(hardCoins)));
+            jugador.appendChild(monedasDificiles);
+
+            // Guardar el contenido en un archivo XML
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            Transformer transformer = transformerFactory.newTransformer();
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            DOMSource source = new DOMSource(doc);
+            StreamResult result = new StreamResult(new File(rutaT.toString()));
+
+            transformer.transform(source, result);
+
+            System.out.println("Archivo guardado en: " + rutaT.toString());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static int obtenerTipoArchivoLista(Scanner sc) {
+        System.out.println("Selecciona el tipo de archivo:");
+        System.out.println("1. Archivo de texto");
+        System.out.println("2. Archivo binario secuencial (.dat)");
+        System.out.println("3. Archivo de objetos binario");
+        System.out.println("4. Archivo XML");
+        System.out.print("Elige una opción: ");
+
+        int tipoArchivo = sc.nextInt();
+        return tipoArchivo;
+    }
+
+    // Método principal para listar jugadores según el tipo de archivo
+    public static void listarJugadores(String ruta, int tipoArchivo) throws IOException {
+        switch (tipoArchivo) {
+            case 1:
+                listarJugadoresTxt(ruta+"Jugadores.txt");
+                break;
+            case 2:
+                listarJugadoresDat(ruta+"Jugadores.dat");
+                break;
+            case 3:
+                listarJugadoresObjetoBinario(ruta+"Jugadores.dat");
+                break;
+            case 4:
+                listarJugadoresXML(ruta+"Jugadores.xml");
+                break;
+            default:
+                System.out.println("Tipo de archivo no soportado.");
+        }
+    }
+
+    // Listar jugadores de archivo de texto
+    private static void listarJugadoresTxt(String ruta) {
+        try (BufferedReader br = new BufferedReader(new FileReader(ruta))) {
+            String linea;
+            while ((linea = br.readLine()) != null) {
+                System.out.println(linea);  // Mostrar cada línea
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("Archivo no encontrado.");
+        } catch (IOException e) {
+            System.out.println("Error de lectura del archivo.");
+        }
+    }
+
+public static void listarJugadoresDat(String ruta) throws IOException {
+    List<Jugadores> jugadores = new ArrayList<>();
+    try (DataInputStream dataInput = new DataInputStream(new FileInputStream(ruta))) {
+        while (dataInput.available() > 0) {
+            Jugadores jugador = leerJugador(dataInput);
+            jugadores.add(jugador);
+        }
+    } catch (EOFException e) {
+        // Fin de archivo
+    }
+
+    // Display the list of players
+    for (Jugadores jugador : jugadores) {
+        System.out.println("ID: " + jugador.getUser_id());
+        System.out.println("Nick Name: " + jugador.getNick_name());
+        System.out.println("Experiencia: " + jugador.getExperience());
+        System.out.println("Nivel de Vida: " + jugador.getLife_level());
+        System.out.println("Monedas: " + jugador.getCoins());
+        System.out.println("Monedas de Pago: " + jugador.getHard_coins());
+        System.out.println("------------------------------");
+    }
+}
+
+private static Jugadores leerJugador(DataInputStream dataInput) throws IOException {
+    int id = dataInput.readInt();
+    String nick = dataInput.readUTF();
+    int experience = dataInput.readInt();
+    int lifeLevel = dataInput.readInt();
+    int coins = dataInput.readInt();
+    int hardCoins = dataInput.readInt();
+    return new Jugadores(nick, experience, lifeLevel, coins, hardCoins);
+}
+
+
+
+
+    // Listar jugadores de archivo de objetos binarios
+    private static void listarJugadoresObjetoBinario(String ruta) {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(ruta))) {
+            while (true) {
+                Jugadores jugador = (Jugadores) ois.readObject();
+                System.out.println(jugador);  // Usamos el método toString() del objeto Jugadores
+                System.out.println("------------------------------");
+            }
+        } catch (EOFException e) {
+            // Fin de archivo
+        } catch (FileNotFoundException e) {
+            System.out.println("Archivo no encontrado.");
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error de lectura del archivo de objetos.");
+        }
+    }
+
+    // Listar jugadores de archivo XML
+    private static void listarJugadoresXML(String ruta) {
+        try {
+            File xmlFile = new File(ruta);
+            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+            Document doc = dBuilder.parse(xmlFile);
+            doc.getDocumentElement().normalize();
+
+            NodeList nList = doc.getElementsByTagName("jugador");
+
+            for (int i = 0; i < nList.getLength(); i++) {
+                Node nNode = nList.item(i);
+                if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element elem = (Element) nNode;
+
+                    String id = elem.getElementsByTagName("id").item(0).getTextContent();
+                    String nickName = elem.getElementsByTagName("nickname").item(0).getTextContent();
+                    String lifeLevel = elem.getElementsByTagName("lifelevel").item(0).getTextContent();
+                    String coins = elem.getElementsByTagName("coins").item(0).getTextContent();
+                    String hardCoins = elem.getElementsByTagName("hardcoins").item(0).getTextContent();
+
+                    System.out.println("ID: " + id);
+                    System.out.println("Nick Name: " + nickName);
+                    System.out.println("Nivel de Vida: " + lifeLevel);
+                    System.out.println("Monedas: " + coins);
+                    System.out.println("Monedas de Pago: " + hardCoins);
+                    System.out.println("------------------------------");
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error al leer el archivo XML.");
+        }
+    }
+
+    // Método auxiliar para pedir al usuario la ruta y el tipo de archivo
+    public static void seleccionarArchivo(Scanner sc) throws IOException {
+        System.out.println("Escribe la ruta del archivo que deseas listar: ");
+        String ruta = sc.next();
+
+        System.out.println("Selecciona el tipo de archivo:");
+        System.out.println("1. Archivo de texto");
+        System.out.println("2. Archivo binario secuencial (.dat)");
+        System.out.println("3. Archivo de objetos binario");
+        System.out.println("4. Archivo XML");
+        int tipoArchivo = sc.nextInt();
+
+        Jugadores.listarJugadoresDat(ruta);
+    }
+
 }
