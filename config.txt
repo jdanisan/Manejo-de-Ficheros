@@ -2,20 +2,20 @@ Buenas master
 ¿Qué acción quieres realizar hoy?
 	1.- Alta de jugador/es
 	2.- Baja de jugador/es
-    3.- Modificar datos de jugador/es
+	3.- Modificar datos de jugador/es
 	4.- Buscar por userID la información
 	5.- Listado completo de jugadores
-    6.- Configurar el submenu
+    	6.- Configurar el submenu
 		6.1- Fichero secuencial de texto
 		6.2- Fichero secuencial binario
-        6.3- Fichero de objetos binario
-        6.4- Fichero de acceso aleatorio binario
-        6.5- Fichero de texto XML
-    7.- Salir o finalizar programa
+        	6.3- Fichero de objetos binario
+        	6.4- Fichero de acceso aleatorio binario
+        	6.5- Fichero de texto XML
+	7.- Salir o finalizar programa
 
 Submenu2
 	1- Fichero secuencial de texto
 	2- Fichero secuencial binario
-    3- Fichero de objetos binario
-    4- Fichero de acceso aleatorio binario
-    5- Fichero de texto XML
+    	3- Fichero de objetos binario
+    	4- Fichero de acceso aleatorio binario
+    	5- Fichero de texto XML
