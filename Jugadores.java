@@ -225,14 +225,15 @@ public class Jugadores implements Serializable {
             e.printStackTrace();
         }
 
-        return null;  // Retornar null si no se encuentra el jugador
+        return new Jugadores("jugaodor no encontrado",0,0,0);  // Retornar null si no se encuentra el jugador
     }
 
 
-    // Buscar jugador en un archivo .dat (binario secuencial)
-    private static Jugadores buscarJugadorDat(String ruta, int id) {
-        try (DataInputStream dis = new DataInputStream(new FileInputStream(ruta))) {
-            while (dis.available() > 0) {
+// Buscar jugador en un archivo .dat (binario secuencial)
+private static Jugadores buscarJugadorDat(String ruta, int id) {
+    try (DataInputStream dis = new DataInputStream(new FileInputStream(ruta))) {
+        while (true) {
+            try {
                 int idJugador = dis.readInt();
                 String nick_name = dis.readUTF();
                 int experience = dis.readInt();
@@ -243,12 +244,16 @@ public class Jugadores implements Serializable {
                 if (idJugador == id) {
                     return new Jugadores(nick_name, experience, life_level, coins, hard_coins);
                 }
+            } catch (EOFException e) {
+                MenuPrincipal.MostrarMenu("Submenu2");
+                break; // End of file reached
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
-        return null;
+    } catch (IOException e) {
+        e.printStackTrace();
     }
+    return null;
+}
 
     // Buscar jugador en un archivo binario de acceso aleatorio
     private static Jugadores buscarJugadorBinario(String ruta, int id) {
@@ -538,36 +543,30 @@ public class Jugadores implements Serializable {
         }
     }
 
-    public static void listarJugadoresDat(String ruta) throws IOException {
-        // Lista para almacenar los jugadores leídos del archivo
-        List<Jugadores> jugadores = new ArrayList<>();
-
-        // Abrir el archivo y leerlo usando DataInputStream dentro de un bloque try-with-resources
-        try (DataInputStream dataInput = new DataInputStream(new FileInputStream(ruta))) {
-            // Bucle infinito que se detendrá cuando alcancemos el final del archivo
+    private static void listarJugadoresDat(String ruta) throws IOException {
+    File fichero = new File(ruta);
+    try (FileInputStream filein = new FileInputStream(fichero);
+         DataInputStream dataIS = new DataInputStream(filein)) {
+        String nick_name;
+        int experience, life_level, coins, hard_coins;
+        try {
             while (true) {
-                try {
-                    // Leer un jugador desde el archivo y añadirlo a la lista
-                    Jugadores jugador = leerJugador(dataInput);
-                    jugadores.add(jugador);
-                } catch (EOFException e) {
-                    // Capturar la excepción que indica que hemos llegado al final del archivo
-                    break; // Salir del bucle
-                }
+                nick_name = dataIS.readUTF(); // Recupera el nombre
+                experience = dataIS.readInt(); // Recupera la experiencia
+                life_level = dataIS.readInt(); // Recupera el nivel de vida
+                coins = dataIS.readInt(); // Recupera las monedas
+                hard_coins = dataIS.readInt(); // Recupera las monedas de pago
+                System.out.println("Nombre: " + nick_name + ", Experiencia: " + experience +
+                                   ", Nivel de Vida: " + life_level + ", Monedas: " + coins +
+                                   ", Monedas de Pago: " + hard_coins);
             }
+        } catch (EOFException eo) {
+            dataIS.close(); //cerrar stream
         }
-
-        // Iterar por la lista de jugadores y mostrar sus datos en la consola
-        for (Jugadores jugador : jugadores) {
-            System.out.println("ID: " + jugador.getUser_id()); // Mostrar ID del jugador
-            System.out.println("Nick Name: " + jugador.getNick_name()); // Mostrar apodo del jugador
-            System.out.println("Experiencia: " + jugador.getExperience()); // Mostrar experiencia
-            System.out.println("Nivel de Vida: " + jugador.getLife_level()); // Mostrar nivel de vida
-            System.out.println("Monedas: " + jugador.getCoins()); // Mostrar monedas
-            System.out.println("Monedas de Pago: " + jugador.getHard_coins()); // Mostrar monedas premium
-            System.out.println("------------------------------"); // Separador entre jugadores
-        }
+    } catch (IOException e) {
+        e.printStackTrace();
     }
+}
 
     private static Jugadores leerJugador(DataInputStream dataInput) throws IOException {
         // Leer los datos de un jugador desde el flujo binario

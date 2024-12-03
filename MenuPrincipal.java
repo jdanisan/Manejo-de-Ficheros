@@ -44,7 +44,7 @@ public class MenuPrincipal {
                 new FileReader("C:\\Users\\JD\\Desktop\\config.txt"));
 
         while (eleccion <= 0 || eleccion >= 8) {
-            MostrarMenu();
+            MostrarMenu("Submenu");
             TimeUnit.SECONDS.sleep(3);
             eleccion = sc.nextInt();
 
@@ -77,6 +77,7 @@ public class MenuPrincipal {
                 break;
             case 6:
                 System.out.println("Mostrando submenu...");
+                MostrarMenu("5- Fichero de texto XML");
                 break;
             case 7:
                 System.out.println("Hasta la proxima, jefe");
@@ -88,10 +89,11 @@ public class MenuPrincipal {
 
     }
 
-    public static void MostrarMenu() {
+    public static void MostrarMenu(String Objetivo) {
 
-        String objetivo;
-        objetivo = "Submenu2";
+
+        String objetivo = Objetivo;
+
         try {
             BufferedReader config = new BufferedReader(
                     //En caso de pasar la base de datos a otro lado, habrá que modificar esta ruta.
