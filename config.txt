@@ -6,8 +6,8 @@ Buenas master
 	4.- Buscar por userID la información
 	5.- Listado completo de jugadores
     6.- Configurar el submenu
-		6.1- Fichero secuencial de texto
-		6.2- Fichero secuencial binario
+	6.1- Fichero secuencial de texto
+	6.2- Fichero secuencial binario
         6.3- Fichero de objetos binario
         6.4- Fichero de acceso aleatorio binario
         6.5- Fichero de texto XML
@@ -16,6 +16,6 @@ Buenas master
 Submenu2
 	1- Fichero secuencial de texto
 	2- Fichero secuencial binario
-    3- Fichero de objetos binario
+   	3- Fichero de objetos binario
    	4- Fichero de acceso aleatorio binario
    	5- Fichero de texto XML
